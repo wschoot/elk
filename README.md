@@ -26,3 +26,17 @@ root@9f1546365cdb:~# curl -XPUT http://elasticsearch:9200/shodan
 .env file
 =========
 put your shodan API key in .env file
+
+Database access
+===============
+GUI
+---
+- http://localhost:8080/
+
+CLI
+---
+```bash
+root@9f1546365cdb:~# mysql -h db -u root -pexample
+
+Welcome to the MariaDB monitor.  Commands end with ; or \g.
+```

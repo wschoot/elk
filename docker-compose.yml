@@ -96,6 +96,28 @@ services:
         read_only: true
     command: ["--strict.perms=false", "-system.hostfs=/hostfs"]
 
+  db:
+    build:
+      context: service-sql/
+    volumes:
+      - type: volume
+        source: sql
+        target: /var/lib/mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: example
+    networks:
+      - elk
+
+  adminer:
+    image: adminer
+    ports:
+      - 8080:8080
+    depends_on:
+      - db
+    networks:
+      - elk
+
+
   shodan:
     build:
       context: service-shodan/
@@ -119,3 +141,4 @@ volumes:
   elasticsearch:
   shodan:
   metricbeat:
+  sql:

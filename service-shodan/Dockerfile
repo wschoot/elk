@@ -14,7 +14,9 @@ RUN set -eux; \
       bind9-host \
       less \
       curl \
-			netcat \
+      vim \
+      mariadb-client \
+      netcat \
       tcpdump \
       zlib1g bzip2 xz-utils \
       dnsutils telnet \
