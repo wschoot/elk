@@ -1,0 +1,121 @@
+version: "3.3"
+
+services:
+  elasticsearch:
+    build:
+      context: service-elasticsearch/
+      args:
+        ELK_VERSION: $ELK_VERSION
+    volumes:
+      - type: bind
+        source: ./service-elasticsearch/config/elasticsearch.yml
+        target: /usr/share/elasticsearch/config/elasticsearch.yml
+        read_only: true
+      - type: volume
+        source: elasticsearch
+        target: /usr/share/elasticsearch/data
+    ports:
+      - "9200:9200"
+      - "9300:9300"
+    environment:
+      - node.name=elasticsearch
+      - discovery.type=single-node
+      - bootstrap.memory_lock=true
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+    networks:
+      - elk
+
+  logstash:
+    build:
+      context: service-logstash/
+      args:
+        ELK_VERSION: $ELK_VERSION
+    volumes:
+      - type: bind
+        source: ./service-logstash/config/logstash.yml
+        target: /usr/share/logstash/config/logstash.yml
+        read_only: true
+      - type: bind
+        source: ./service-logstash/pipeline
+        target: /usr/share/logstash/pipeline
+        read_only: true
+    ports:
+      - "5000:5000"
+      - "9600:9600"
+      - "514:514/tcp"
+      - "514:514/udp"
+    environment:
+      LS_JAVA_OPTS: "-Xms512m -Xmx512m"
+    networks:
+      - elk
+    depends_on:
+      - elasticsearch
+
+  kibana:
+    build:
+      context: service-kibana/
+      args:
+        ELK_VERSION: $ELK_VERSION
+    volumes:
+      - type: bind
+        source: ./service-kibana/config/kibana.yml
+        target: /usr/share/kibana/config/kibana.yml
+        read_only: true
+    ports:
+      - "5601:5601"
+    networks:
+      - elk
+    depends_on:
+      - elasticsearch
+    environment:
+      ELASTICSEARCH_URL: http://elasticsearch:9200
+      ELASTICSEARCH_HOSTS: '["http://elasticsearch:9200"]'
+
+  # https://github.com/shazChaudhry/docker-elastic/blob/master/metricbeat-docker-compose.yml
+  metricbeat:
+    build:
+      context: service-metricbeat/
+      args:
+        ELK_VERSION: $ELK_VERSION
+    networks:
+      - elk
+    depends_on:
+      - elasticsearch
+    environment:
+      - output.elasticsearch.hosts=["elasticsearch:9200"]
+      - setup.kibana.host=kibana:5601
+    volumes:
+      - /proc:/hostfs/proc:ro
+      - /sys/fs/cgroup:/hostfs/sys/fs/cgroup:ro
+      - /:/hostfs:ro
+      - /var/run/docker.sock:/var/run/docker.sock
+      - metricbeat:/usr/share/metricbeat/data
+      - type: bind
+        source: ./service-metricbeat/config/metricbeat.yml
+        target: /usr/share/metricbeat/config/metricbeat.yml
+        read_only: true
+    command: ["--strict.perms=false", "-system.hostfs=/hostfs"]
+
+  shodan:
+    build:
+      context: service-shodan/
+      args:
+        API_KEY: ${API_KEY}
+    tty: true
+    volumes:
+      - type: volume
+        source: shodan
+        target: /root
+    environment:
+      API_KEY: $API_KEY
+    networks:
+      - elk
+
+networks:
+  elk:
+    driver: bridge
+
+volumes:
+  elasticsearch:
+  shodan:
+  metricbeat:
